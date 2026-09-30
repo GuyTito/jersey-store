@@ -1,85 +1,42 @@
-"use client";
+import Image from "next/image";
+import Link from "next/link";
+import { getProducts } from "@/lib/api";
+import { formatPrice } from "@/lib/format";
 
-import { useEffect, useState } from "react";
-
-type HealthResponse = {
-  status: string;
-  message: string;
-  timestamp: string;
-};
-
-type HealthState =
-  | { status: "loading" }
-  | { status: "success"; data: HealthResponse }
-  | { status: "error"; message: string };
-
-export default function Home() {
-  const [healthState, setHealthState] = useState<HealthState>({
-    status: "loading",
-  });
-
-  useEffect(() => {
-    const controller = new AbortController();
-
-    async function loadHealth() {
-      try {
-        const apiUrl = process.env.NEXT_PUBLIC_API_URL;
-
-        if (!apiUrl) {
-          throw new Error("NEXT_PUBLIC_API_URL is not configured.");
-        }
-
-        const response = await fetch(`${apiUrl}/api/health`, {
-          signal: controller.signal,
-        });
-
-        if (!response.ok) {
-          throw new Error(`API responded with HTTP ${response.status}.`);
-        }
-
-        const data = (await response.json()) as HealthResponse;
-        setHealthState({ status: "success", data });
-      } catch (error) {
-        if (controller.signal.aborted) {
-          return;
-        }
-
-        setHealthState({
-          status: "error",
-          message: error instanceof Error ? error.message : "Request failed.",
-        });
-      }
-    }
-
-    void loadHealth();
-
-    return () => controller.abort();
-  }, []);
+export default async function Home() {
+  const products = await getProducts();
 
   return (
-    <main className="mx-auto max-w-2xl p-8">
-      <h1 className="text-3xl font-bold">Jersey Store</h1>
-      <p className="mt-2 text-gray-600">Backend connection check</p>
+    <main className="mx-auto max-w-6xl px-6 py-10">
+      <header className="mb-8">
+        <h1 className="text-3xl font-bold">Jersey Store</h1>
+        <p className="mt-1 text-gray-600">Authentic club jerseys, ordered over WhatsApp.</p>
+      </header>
 
-      <section className="mt-8 rounded border p-6" aria-live="polite">
-        {healthState.status === "loading" && <p>Contacting the API...</p>}
-
-        {healthState.status === "success" && (
-          <div>
-            <p className="font-semibold">{healthState.data.message}</p>
-            <p className="mt-2">Status: {healthState.data.status}</p>
-            <p className="mt-1 text-sm text-gray-600">
-              Timestamp: {new Date(healthState.data.timestamp).toLocaleString()}
-            </p>
-          </div>
-        )}
-
-        {healthState.status === "error" && (
-          <p role="alert" className="text-red-700">
-            Could not reach the API: {healthState.message}
-          </p>
-        )}
-      </section>
+      <ul className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
+        {products.map((product) => (
+          <li key={product.id}>
+            <Link href={`/products/${product.slug}`} className="group block">
+              <Image
+                src={product.imageUrl}
+                alt={product.name}
+                width={800}
+                height={1000}
+                className="aspect-[4/5] w-full rounded-lg object-cover"
+              />
+              <h2 className="mt-3 font-semibold group-hover:underline">{product.name}</h2>
+              <p className="text-sm text-gray-600">
+                {product.club} · {product.season} · {product.kitType}
+              </p>
+              <p className="mt-1 font-medium">
+                {product.lowestInStockPrice === null
+                  ? "Sold out"
+                  : formatPrice(product.lowestInStockPrice)}
+              </p>
+            </Link>
+          </li>
+        ))}
+      </ul>
     </main>
   );
 }

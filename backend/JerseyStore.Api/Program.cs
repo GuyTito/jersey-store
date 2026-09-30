@@ -18,6 +18,9 @@ builder.Services.AddCors(options =>
 
 builder.Services.AddControllers();
 builder.Services.AddOpenApi();
+builder.Services.AddProblemDetails();
+
+builder.Services.AddSingleton<JerseyStore.Api.Services.IProductService, JerseyStore.Api.Services.InMemoryProductService>();
 
 var app = builder.Build();
 
@@ -28,6 +31,8 @@ if (app.Environment.IsDevelopment())
 
 app.UseRouting();
 app.UseCors(FrontendCorsPolicy);
+app.UseExceptionHandler();
+app.UseStatusCodePages();
 app.UseAuthorization();
 
 app.MapControllers();

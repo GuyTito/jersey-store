@@ -1,6 +1,8 @@
 @JerseyStore.Api_HostAddress = http://localhost:5080
 
-GET {{JerseyStore.Api_HostAddress}}/weatherforecast/
+### Health check - verifies the API is running
+GET {{JerseyStore.Api_HostAddress}}/api/Health
 Accept: application/json
 
 ###
+
