@@ -1,5 +1,9 @@
 import "server-only";
-import { serializeProductSearch, type PagedResponse, type ProductSearchFilters } from "./product-search";
+import {
+  serializeProductSearch,
+  type PagedResponse,
+  type ProductSearchFilters,
+} from "./product-search";
 
 const API_URL = process.env.API_URL;
 
@@ -19,7 +23,12 @@ async function request<T>(path: string): Promise<T> {
   return (await response.json()) as T;
 }
 
-export type ProductVariant = { id: number; size: string; price: number; stock: number };
+export type ProductVariant = {
+  id: number;
+  size: string;
+  price: number;
+  stock: number;
+};
 
 export type ProductSummary = {
   id: number;

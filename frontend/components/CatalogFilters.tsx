@@ -2,33 +2,52 @@
 
 import { useEffect, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { buildProductSearchHref, type ProductSearchFilters } from "@/lib/product-search";
+import {
+  buildProductSearchHref,
+  type ProductSearchFilters,
+} from "@/lib/product-search";
 
 type TextFilter = "q" | "club" | "season" | "minPrice" | "maxPrice";
 
-const inputClassName = "mt-1 block w-full rounded border border-gray-300 px-3 py-2 font-normal";
-const selectClassName = "mt-1 block w-full rounded border border-gray-300 bg-white px-3 py-2 font-normal";
+const inputClassName =
+  "mt-1 block w-full rounded border border-gray-300 px-3 py-2 font-normal";
+const selectClassName =
+  "mt-1 block w-full rounded border border-gray-300 bg-white px-3 py-2 font-normal";
 
-export function CatalogFilters({ initialFilters }: { initialFilters: ProductSearchFilters }) {
+export function CatalogFilters({
+  initialFilters,
+}: {
+  initialFilters: ProductSearchFilters;
+}) {
   const router = useRouter();
   const debounceTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [filters, setFilters] = useState(initialFilters);
   const [isPending, startTransition] = useTransition();
 
-  useEffect(() => () => {
-    if (debounceTimer.current) clearTimeout(debounceTimer.current);
-  }, []);
+  useEffect(
+    () => () => {
+      if (debounceTimer.current) clearTimeout(debounceTimer.current);
+    },
+    [],
+  );
 
   function navigate(nextFilters: ProductSearchFilters) {
     startTransition(() => {
-      router.replace(buildProductSearchHref({ ...nextFilters, page: undefined }), {
-        scroll: false,
-      });
+      router.replace(
+        buildProductSearchHref({ ...nextFilters, page: undefined }),
+        {
+          scroll: false,
+        },
+      );
     });
   }
 
   function updateTextFilter(name: TextFilter, value: string) {
-    const nextFilters = { ...filters, [name]: value || undefined, page: undefined };
+    const nextFilters = {
+      ...filters,
+      [name]: value || undefined,
+      page: undefined,
+    };
     setFilters(nextFilters);
 
     if (debounceTimer.current) clearTimeout(debounceTimer.current);
@@ -36,7 +55,11 @@ export function CatalogFilters({ initialFilters }: { initialFilters: ProductSear
   }
 
   function updateSelectFilter(name: "size" | "sort", value: string) {
-    const nextFilters = { ...filters, [name]: value || undefined, page: undefined };
+    const nextFilters = {
+      ...filters,
+      [name]: value || undefined,
+      page: undefined,
+    };
     setFilters(nextFilters);
 
     if (debounceTimer.current) clearTimeout(debounceTimer.current);
@@ -101,7 +124,9 @@ export function CatalogFilters({ initialFilters }: { initialFilters: ProductSear
           >
             <option value="">Any size</option>
             {["S", "M", "L", "XL"].map((size) => (
-              <option key={size} value={size}>{size}</option>
+              <option key={size} value={size}>
+                {size}
+              </option>
             ))}
           </select>
         </label>
@@ -113,7 +138,9 @@ export function CatalogFilters({ initialFilters }: { initialFilters: ProductSear
             min="0"
             step="0.01"
             value={filters.minPrice ?? ""}
-            onChange={(event) => updateTextFilter("minPrice", event.target.value)}
+            onChange={(event) =>
+              updateTextFilter("minPrice", event.target.value)
+            }
             className={inputClassName}
           />
         </label>
@@ -125,7 +152,9 @@ export function CatalogFilters({ initialFilters }: { initialFilters: ProductSear
             min="0"
             step="0.01"
             value={filters.maxPrice ?? ""}
-            onChange={(event) => updateTextFilter("maxPrice", event.target.value)}
+            onChange={(event) =>
+              updateTextFilter("maxPrice", event.target.value)
+            }
             className={inputClassName}
           />
         </label>
@@ -152,7 +181,11 @@ export function CatalogFilters({ initialFilters }: { initialFilters: ProductSear
         >
           Reset
         </button>
-        {isPending && <span role="status" className="text-sm text-gray-600">Updating results...</span>}
+        {isPending && (
+          <span role="status" className="text-sm text-gray-600">
+            Updating results...
+          </span>
+        )}
       </div>
     </form>
   );
