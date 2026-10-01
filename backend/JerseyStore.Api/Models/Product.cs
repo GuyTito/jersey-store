@@ -39,7 +39,7 @@ public sealed class Product
     {
         get
         {
-            var prices = Variants.Where(v => v.Stock > 0).Select(v => v.Price).ToList();
+            var prices = Variants.Where(v => v.IsActive && v.Stock > 0).Select(v => v.Price).ToList();
             return prices.Count == 0 ? null : prices.Min();
         }
     }

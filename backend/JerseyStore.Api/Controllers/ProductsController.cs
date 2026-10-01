@@ -14,11 +14,48 @@ public sealed class ProductsController : ControllerBase
     public ProductsController(IProductService products) => _products = products;
 
     [HttpGet]
-    [ProducesResponseType<IReadOnlyList<ProductSummaryResponse>>(StatusCodes.Status200OK)]
-    public async Task<ActionResult<IReadOnlyList<ProductSummaryResponse>>> GetAll(CancellationToken cancellationToken)
+    [ProducesResponseType<PagedResponse<ProductSummaryResponse>>(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    public async Task<ActionResult<PagedResponse<ProductSummaryResponse>>> GetAll(
+        [FromQuery] ProductSearchRequest request,
+        CancellationToken cancellationToken)
     {
-        var products = await _products.GetAllAsync(cancellationToken);
-        return Ok(products.Select(ToSummary).ToList());
+        if (request.MinPrice < 0 || request.MaxPrice < 0)
+        {
+            return BadRequest("Price bounds cannot be negative.");
+        }
+
+        if (request.MinPrice > request.MaxPrice)
+        {
+            return BadRequest("minPrice cannot be greater than maxPrice.");
+        }
+
+        var sort = string.IsNullOrWhiteSpace(request.Sort)
+            ? "featured"
+            : request.Sort.Trim().ToLowerInvariant();
+
+        if (sort is not ("featured" or "name-asc" or "price-asc" or "price-desc"))
+        {
+            return BadRequest("Unsupported sort value.");
+        }
+
+        var page = await _products.SearchAsync(
+            new ProductSearchCriteria(
+                Normalize(request.Q),
+                Normalize(request.Club),
+                Normalize(request.Season),
+                Normalize(request.Size),
+                request.MinPrice,
+                request.MaxPrice,
+                sort,
+                request.Page),
+            cancellationToken);
+
+        return Ok(new PagedResponse<ProductSummaryResponse>(
+            page.Items.Select(ToSummary).ToList(),
+            page.TotalCount,
+            page.Page,
+            page.PageSize));
     }
 
     [HttpGet("{slug}")]
@@ -45,4 +82,7 @@ public sealed class ProductsController : ControllerBase
                 .ThenBy(v => v.Size)
                 .Select(v => new ProductVariantResponse(v.Id, v.Size, v.Price, v.Stock))
                 .ToList());
+
+    private static string? Normalize(string? value) =>
+        string.IsNullOrWhiteSpace(value) ? null : value.Trim();
 }

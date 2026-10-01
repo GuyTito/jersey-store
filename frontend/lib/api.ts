@@ -1,4 +1,5 @@
 import "server-only";
+import { serializeProductSearch, type PagedResponse, type ProductSearchFilters } from "./product-search";
 
 const API_URL = process.env.API_URL;
 
@@ -38,7 +39,13 @@ export type ProductDetail = ProductSummary & {
 
 export type Storefront = { whatsAppNumber: string; currencyCode: string };
 
-export const getProducts = () => request<ProductSummary[]>("/api/products");
+export const getProducts = (filters: ProductSearchFilters = {}) => {
+  const query = serializeProductSearch(filters);
+  return request<PagedResponse<ProductSummary>>(
+    `/api/products${query ? `?${query}` : ""}`,
+  );
+};
+
 export const getProductBySlug = (slug: string) =>
   request<ProductDetail | null>(`/api/products/${encodeURIComponent(slug)}`);
 export const getStorefront = () => request<Storefront>("/api/storefront");
