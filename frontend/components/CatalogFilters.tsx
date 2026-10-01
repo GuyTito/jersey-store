@@ -9,10 +9,8 @@ import {
 
 type TextFilter = "q" | "club" | "season" | "minPrice" | "maxPrice";
 
-const inputClassName =
-  "mt-1 block w-full rounded border border-gray-300 px-3 py-2 font-normal";
-const selectClassName =
-  "mt-1 block w-full rounded border border-gray-300 bg-white px-3 py-2 font-normal";
+const inputClassName = "filter-control";
+const selectClassName = "filter-control";
 
 export function CatalogFilters({
   initialFilters,
@@ -73,14 +71,9 @@ export function CatalogFilters({
   }
 
   return (
-    <form
-      action="/"
-      method="get"
-      aria-busy={isPending}
-      className="mb-7 border-y border-gray-200 py-5"
-    >
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <label className="text-sm font-medium">
+    <form action="/" method="get" aria-busy={isPending} className="filter-form">
+      <div className="filter-grid">
+        <label className="filter-field">
           Search
           <input
             type="search"
@@ -92,7 +85,7 @@ export function CatalogFilters({
             className={inputClassName}
           />
         </label>
-        <label className="text-sm font-medium">
+        <label className="filter-field">
           Club
           <input
             type="text"
@@ -103,7 +96,7 @@ export function CatalogFilters({
             className={inputClassName}
           />
         </label>
-        <label className="text-sm font-medium">
+        <label className="filter-field">
           Season
           <input
             type="text"
@@ -114,7 +107,7 @@ export function CatalogFilters({
             className={inputClassName}
           />
         </label>
-        <label className="text-sm font-medium">
+        <label className="filter-field">
           Size in stock
           <select
             name="size"
@@ -130,7 +123,7 @@ export function CatalogFilters({
             ))}
           </select>
         </label>
-        <label className="text-sm font-medium">
+        <label className="filter-field">
           Minimum price
           <input
             type="number"
@@ -144,7 +137,7 @@ export function CatalogFilters({
             className={inputClassName}
           />
         </label>
-        <label className="text-sm font-medium">
+        <label className="filter-field">
           Maximum price
           <input
             type="number"
@@ -158,7 +151,7 @@ export function CatalogFilters({
             className={inputClassName}
           />
         </label>
-        <label className="text-sm font-medium">
+        <label className="filter-field">
           Sort by
           <select
             name="sort"
@@ -173,16 +166,12 @@ export function CatalogFilters({
           </select>
         </label>
       </div>
-      <div className="mt-4 flex min-h-6 items-center gap-4">
-        <button
-          type="button"
-          onClick={resetFilters}
-          className="text-sm font-medium underline underline-offset-4"
-        >
+      <div className="filter-form__footer">
+        <button type="button" onClick={resetFilters} className="filter-reset">
           Reset
         </button>
         {isPending && (
-          <span role="status" className="text-sm text-gray-600">
+          <span role="status" className="filter-status">
             Updating results...
           </span>
         )}

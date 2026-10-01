@@ -22,22 +22,26 @@ export default function ProductPurchasePanel({
 
   if (available.length === 0) {
     return (
-      <p className="mt-8 font-medium text-red-700">This product is sold out.</p>
+      <p className="sold-out-message" role="status">
+        This jersey is sold out.
+      </p>
     );
   }
 
   return (
-    <section className="mt-8">
-      <h2 className="font-semibold">Choose a size</h2>
-      <div className="mt-3 flex flex-wrap gap-2">
+    <section className="purchase-panel">
+      <h2 className="purchase-panel__title">Choose a size</h2>
+      <div className="size-options" role="group" aria-label="Choose a size">
         {product.variants.map((variant) => {
           const soldOut = variant.stock === 0;
           const isSelected = variant.id === selectedId;
-          const classes = soldOut
-            ? "cursor-not-allowed rounded border px-4 py-2 text-gray-400 line-through"
-            : isSelected
-              ? "rounded border-2 border-black px-4 py-2"
-              : "rounded border px-4 py-2 hover:border-gray-500";
+          const classes = [
+            "size-option",
+            soldOut && "size-option--sold-out",
+            isSelected && "is-selected",
+          ]
+            .filter(Boolean)
+            .join(" ");
 
           return (
             <button
@@ -55,26 +59,28 @@ export default function ProductPurchasePanel({
       </div>
 
       {selected ? (
-        <a
-          href={buildWhatsAppUrl(whatsappNumber, {
-            name: product.name,
-            slug: product.slug,
-            size: selected.size,
-            price: selected.price,
-            currencyCode,
-          })}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="mt-4 inline-block rounded bg-green-600 px-6 py-3 font-semibold text-white"
-        >
-          Buy on WhatsApp
-        </a>
+        <>
+          <p className="purchase-price">
+            {formatPrice(selected.price, currencyCode)}{" "}
+            <span>for size {selected.size}</span>
+          </p>
+          <a
+            href={buildWhatsAppUrl(whatsappNumber, {
+              name: product.name,
+              slug: product.slug,
+              size: selected.size,
+              price: selected.price,
+              currencyCode,
+            })}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="purchase-order"
+          >
+            Order on WhatsApp <span aria-hidden="true">↗</span>
+          </a>
+        </>
       ) : (
-        <p className="mt-4 text-sm text-gray-600">Select a size to continue</p>
-      )}
-
-      {selected && (
-        <p className="mt-3">{formatPrice(selected.price, currencyCode)}</p>
+        <p className="purchase-hint">Select a size to see its price.</p>
       )}
     </section>
   );

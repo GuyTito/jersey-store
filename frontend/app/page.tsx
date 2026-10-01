@@ -1,6 +1,7 @@
-import Image from "next/image";
 import Link from "next/link";
 import { CatalogFilters } from "@/components/CatalogFilters";
+import { ProductImage } from "@/components/ProductImage";
+import { StorefrontHeader } from "@/components/StorefrontHeader";
 import { getProducts } from "@/lib/api";
 import {
   buildProductSearchHref,
@@ -62,106 +63,125 @@ export default async function Home({
   const catalog = priceError ? null : await getProducts(filters);
 
   return (
-    <main className="mx-auto max-w-6xl px-6 py-10">
-      <header className="mb-8">
-        <h1 className="text-3xl font-bold">Jersey Store</h1>
-        <p className="mt-1 text-gray-600">
-          Authentic club jerseys, ordered over WhatsApp.
-        </p>
-      </header>
-
-      <CatalogFilters initialFilters={filters} />
-
-      {priceError ? (
-        <p role="alert" className="py-8 text-sm font-medium text-red-700">
-          {priceError}
-        </p>
-      ) : catalog ? (
-        <>
-          <div className="mb-4 flex flex-wrap items-baseline justify-between gap-2">
-            <p className="text-sm text-gray-600">
-              {catalog.totalCount}{" "}
-              {catalog.totalCount === 1 ? "jersey" : "jerseys"}
-            </p>
-            {catalog.totalCount > 0 && (
-              <p className="text-sm text-gray-600">
-                Page {catalog.page} of{" "}
-                {Math.ceil(catalog.totalCount / catalog.pageSize)}
+    <div className="storefront-page">
+      <StorefrontHeader />
+      <main>
+        <section className="home-hero">
+          <div className="site-container home-hero__inner">
+            <div className="home-hero__copy">
+              <span className="eyebrow">Club jerseys · 2025/26</span>
+              <h1>
+                Wear the colors
+                <br />
+                <span>of your club.</span>
+              </h1>
+              <p>
+                Find your team, choose a size in stock, and order your jersey
+                directly on WhatsApp.
               </p>
-            )}
+              <div className="home-hero__actions">
+                <Link href="#catalog" className="button button--lime">
+                  Shop all jerseys <span aria-hidden="true">→</span>
+                </Link>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section className="site-container catalog-section" id="catalog">
+          <div className="section-heading">
+            <div>
+              <span className="section-eyebrow">The collection</span>
+              <h2>Shop jerseys</h2>
+            </div>
           </div>
 
-          {catalog.items.length > 0 ? (
-            <ul className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
-              {catalog.items.map((product) => (
-                <li key={product.id}>
-                  <Link
-                    href={`/products/${product.slug}`}
-                    className="group block"
-                  >
-                    <Image
-                      src={product.imageUrl}
-                      alt={product.name}
-                      width={800}
-                      height={1000}
-                      className="aspect-4/5 w-full rounded-lg object-cover"
-                    />
-                    <h2 className="mt-3 font-semibold group-hover:underline">
-                      {product.name}
-                    </h2>
-                    <p className="text-sm text-gray-600">
-                      {product.club} · {product.season} · {product.kitType}
-                    </p>
-                    <p className="mt-1 font-medium">
-                      {product.lowestInStockPrice === null
-                        ? "Sold out"
-                        : formatPrice(product.lowestInStockPrice)}
-                    </p>
-                  </Link>
-                </li>
-              ))}
-            </ul>
-          ) : (
-            <p className="border-y border-gray-200 py-12 text-center text-gray-600">
-              No jerseys match these filters.
-            </p>
-          )}
+          <CatalogFilters initialFilters={filters} />
 
-          {catalog.totalCount > catalog.pageSize && (
-            <nav
-              aria-label="Catalog pages"
-              className="mt-8 flex items-center justify-between border-t border-gray-200 pt-5"
-            >
-              {catalog.page > 1 ? (
-                <Link
-                  href={buildProductSearchHref({
-                    ...filters,
-                    page: catalog.page - 1,
-                  })}
-                  rel="prev"
-                  className="font-medium underline underline-offset-4"
-                >
-                  Previous
-                </Link>
+          {priceError ? (
+            <p role="alert" className="catalog-error">
+              {priceError}
+            </p>
+          ) : catalog ? (
+            <>
+              <div className="section-heading">
+                <p className="catalog-count">
+                  {catalog.totalCount}{" "}
+                  {catalog.totalCount === 1 ? "jersey" : "jerseys"}
+                </p>
+                {catalog.totalCount > 0 && (
+                  <p className="catalog-page-count">
+                    Page {catalog.page} of{" "}
+                    {Math.ceil(catalog.totalCount / catalog.pageSize)}
+                  </p>
+                )}
+              </div>
+
+              {catalog.items.length > 0 ? (
+                <ul className="product-grid">
+                  {catalog.items.map((product) => (
+                    <li key={product.id} className="product-card">
+                      <Link
+                        href={`/products/${product.slug}`}
+                        className="product-card__link"
+                      >
+                        <div className="product-card__image-wrap">
+                          <ProductImage
+                            src={product.imageUrl}
+                            alt={product.name}
+                          />
+                        </div>
+                        <h3 className="product-card__name">{product.name}</h3>
+                        <p className="product-card__meta">
+                          {product.club} · {product.season} · {product.kitType}
+                        </p>
+                        <p
+                          className={`product-card__price${product.lowestInStockPrice === null ? " product-card__price--sold-out" : ""}`}
+                        >
+                          {product.lowestInStockPrice === null
+                            ? "Sold out"
+                            : formatPrice(product.lowestInStockPrice)}
+                        </p>
+                      </Link>
+                    </li>
+                  ))}
+                </ul>
               ) : (
-                <span />
+                <p className="catalog-empty">No jerseys match these filters.</p>
               )}
-              {catalog.page * catalog.pageSize < catalog.totalCount && (
-                <Link
-                  href={buildProductSearchHref({
-                    ...filters,
-                    page: catalog.page + 1,
-                  })}
-                  rel="next"
-                  className="font-medium underline underline-offset-4"
-                >
-                  Next
-                </Link>
+
+              {catalog.totalCount > catalog.pageSize && (
+                <nav aria-label="Catalog pages" className="catalog-pagination">
+                  {catalog.page > 1 ? (
+                    <Link
+                      href={buildProductSearchHref({
+                        ...filters,
+                        page: catalog.page - 1,
+                      })}
+                      rel="prev"
+                    >
+                      ← Previous
+                    </Link>
+                  ) : (
+                    <span className="catalog-pagination__spacer" />
+                  )}
+                  {catalog.page * catalog.pageSize < catalog.totalCount && (
+                    <Link
+                      href={buildProductSearchHref({
+                        ...filters,
+                        page: catalog.page + 1,
+                      })}
+                      rel="next"
+                    >
+                      Next →
+                    </Link>
+                  )}
+                </nav>
               )}
-            </nav>
-          )}
-        </>
-      ) : null}
-    </main>
+            </>
+          ) : null}
+        </section>
+      </main>
+    </div>
   );
 }
