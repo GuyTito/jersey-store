@@ -4,6 +4,6 @@ namespace JerseyStore.Api.Services;
 
 public interface IProductService
 {
-    IReadOnlyList<Product> GetAll();
-    Product? GetBySlug(string slug);
+    Task<IReadOnlyList<Product>> GetAllAsync(CancellationToken cancellationToken = default);
+    Task<Product?> GetBySlugAsync(string slug, CancellationToken cancellationToken = default);
 }

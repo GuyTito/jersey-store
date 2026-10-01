@@ -15,15 +15,18 @@ public sealed class ProductsController : ControllerBase
 
     [HttpGet]
     [ProducesResponseType<IReadOnlyList<ProductSummaryResponse>>(StatusCodes.Status200OK)]
-    public ActionResult<IReadOnlyList<ProductSummaryResponse>> GetAll() =>
-        Ok(_products.GetAll().Select(ToSummary).ToList());
+    public async Task<ActionResult<IReadOnlyList<ProductSummaryResponse>>> GetAll(CancellationToken cancellationToken)
+    {
+        var products = await _products.GetAllAsync(cancellationToken);
+        return Ok(products.Select(ToSummary).ToList());
+    }
 
     [HttpGet("{slug}")]
     [ProducesResponseType<ProductDetailResponse>(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
-    public ActionResult<ProductDetailResponse> GetBySlug(string slug)
+    public async Task<ActionResult<ProductDetailResponse>> GetBySlug(string slug, CancellationToken cancellationToken)
     {
-        var product = _products.GetBySlug(slug);
+        var product = await _products.GetBySlugAsync(slug, cancellationToken);
 
         return product is null
             ? NotFound()
@@ -38,7 +41,8 @@ public sealed class ProductsController : ControllerBase
         new(product.Id, product.Slug, product.Name, product.Club, product.Season,
             product.KitType, product.Description, product.ImageUrl,
             product.Variants
-                .OrderBy(v => v.Size.Length).ThenBy(v => v.Size)
+                .OrderBy(v => v.SizeOrder)
+                .ThenBy(v => v.Size)
                 .Select(v => new ProductVariantResponse(v.Id, v.Size, v.Price, v.Stock))
                 .ToList());
 }

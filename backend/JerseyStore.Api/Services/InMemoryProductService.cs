@@ -12,8 +12,9 @@ public sealed class InMemoryProductService : IProductService
         _bySlug = SeedProducts.All.ToDictionary(p => p.Slug, StringComparer.OrdinalIgnoreCase);
     }
 
-    public IReadOnlyList<Product> GetAll() => SeedProducts.All;
+    public Task<IReadOnlyList<Product>> GetAllAsync(CancellationToken cancellationToken = default) =>
+        Task.FromResult<IReadOnlyList<Product>>(SeedProducts.All);
 
-    public Product? GetBySlug(string slug) =>
-        _bySlug.TryGetValue(slug, out var product) ? product : null;
+    public Task<Product?> GetBySlugAsync(string slug, CancellationToken cancellationToken = default) =>
+        Task.FromResult(_bySlug.TryGetValue(slug, out var product) ? product : null);
 }

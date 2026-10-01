@@ -63,6 +63,8 @@ export default function ProductPurchasePanel({
             price: selected.price,
             currencyCode,
           })}
+          target="_blank"
+          rel="noopener noreferrer"
           className="mt-4 inline-block rounded bg-green-600 px-6 py-3 font-semibold text-white"
         >
           Buy on WhatsApp

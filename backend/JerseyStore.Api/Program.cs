@@ -1,3 +1,7 @@
+using JerseyStore.Api.Data;
+using JerseyStore.Api.Services;
+using Microsoft.EntityFrameworkCore;
+
 const string FrontendCorsPolicy = "Frontend";
 
 var builder = WebApplication.CreateBuilder(args);
@@ -16,17 +20,34 @@ builder.Services.AddCors(options =>
     });
 });
 
+builder.Services.AddDbContext<ApplicationDbContext>(options =>
+{
+    var connectionString = builder.Configuration.GetConnectionString("DefaultConnection")
+        ?? throw new InvalidOperationException("ConnectionStrings:DefaultConnection must be configured.");
+
+    options.UseNpgsql(connectionString, npgsqlOptions =>
+    {
+        npgsqlOptions.MigrationsAssembly(typeof(ApplicationDbContext).Assembly.FullName);
+    });
+});
+
 builder.Services.AddControllers();
 builder.Services.AddOpenApi();
 builder.Services.AddProblemDetails();
 
-builder.Services.AddSingleton<JerseyStore.Api.Services.IProductService, JerseyStore.Api.Services.InMemoryProductService>();
+builder.Services.AddScoped<IProductService, EfProductService>();
 
 var app = builder.Build();
 
 if (app.Environment.IsDevelopment())
 {
     app.MapOpenApi();
+}
+
+using (var scope = app.Services.CreateScope())
+{
+    var dbContext = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+    await dbContext.Database.MigrateAsync();
 }
 
 app.UseRouting();
