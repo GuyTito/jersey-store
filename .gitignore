@@ -11,6 +11,7 @@ coverage/
 # .NET
 **/bin/
 **/obj/
+backend/JerseyStore.Api/uploads/
 .vs/
 *.user
 *.suo

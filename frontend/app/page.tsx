@@ -1,7 +1,9 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { CatalogFilters } from "@/components/CatalogFilters";
 import { ProductImage } from "@/components/ProductImage";
 import { StorefrontHeader } from "@/components/StorefrontHeader";
+import { WhatsAppButton } from "@/components/WhatsAppButton";
 import { getProducts } from "@/lib/api";
 import {
   buildProductSearchHref,
@@ -53,6 +55,17 @@ function getPriceError(filters: ProductSearchFilters) {
   return null;
 }
 
+export async function generateMetadata({
+  searchParams,
+}: {
+  searchParams: Promise<PageSearchParams>;
+}): Promise<Metadata> {
+  const { q, club } = readFilters(await searchParams);
+  if (q) return { title: `Search: ${q}` };
+  if (club) return { title: `${club} jerseys` };
+  return { title: { absolute: "Jersey Store | Authentic club jerseys" } };
+}
+
 export default async function Home({
   searchParams,
 }: {
@@ -65,6 +78,7 @@ export default async function Home({
   return (
     <div className="storefront-page">
       <StorefrontHeader />
+      <WhatsAppButton />
       <main>
         <section className="home-hero">
           <div className="site-container home-hero__inner">

@@ -4,9 +4,9 @@
 
 Jersey Store is a full-stack football jersey storefront with an ASP.NET Core API and a Next.js frontend.
 
-**Current milestone: Milestone 3 — Search, filter, pagination.**
+**Current milestone: Milestone 5 — Cart (next). Milestone 4 — Admin login and product management is complete.**
 
-The project has progressed beyond the initial health-check setup. The API serves a PostgreSQL-backed product catalog through EF Core, and the storefront supports product details, catalog search and filters, paged results, and ordering through WhatsApp. Milestone 3 is the current catalog milestone; the next roadmap milestone is admin login and product management.
+The API serves a PostgreSQL-backed product catalog through EF Core, and the storefront supports product details, catalog search and filters, paged results, and ordering through WhatsApp. Milestone 4 added a role-protected admin area at `/admin` for product, variant, and stock management, plus local image uploads with gallery thumbnails, primary-image selection, and image removal, product search, and a settings page for the store WhatsApp number (stored in the database, falling back to `Store:WhatsAppNumber`). Customer pages show a floating WhatsApp support button. Public catalog and WhatsApp checkout remain available without signing in.
 
 ## Project guidelines
 

@@ -1,4 +1,5 @@
 using JerseyStore.Api.Contracts;
+using JerseyStore.Api.Services;
 using Microsoft.AspNetCore.Mvc;
 
 namespace JerseyStore.Api.Controllers;
@@ -8,15 +9,19 @@ namespace JerseyStore.Api.Controllers;
 public sealed class StorefrontController : ControllerBase
 {
     private readonly IConfiguration _configuration;
+    private readonly IStoreSettingsService _settings;
 
-    public StorefrontController(IConfiguration configuration) => _configuration = configuration;
+    public StorefrontController(IConfiguration configuration, IStoreSettingsService settings)
+    {
+        _configuration = configuration;
+        _settings = settings;
+    }
 
     [HttpGet]
     [ProducesResponseType<StorefrontResponse>(StatusCodes.Status200OK)]
-    public ActionResult<StorefrontResponse> Get()
+    public async Task<ActionResult<StorefrontResponse>> Get(CancellationToken cancellationToken)
     {
-        var number = _configuration["Store:WhatsAppNumber"]
-            ?? throw new InvalidOperationException("Store:WhatsAppNumber must be configured.");
+        var number = await _settings.GetWhatsAppNumberAsync(cancellationToken);
 
         return Ok(new StorefrontResponse(number, _configuration["Store:CurrencyCode"] ?? "GHS"));
     }

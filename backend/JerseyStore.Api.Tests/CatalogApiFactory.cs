@@ -12,6 +12,8 @@ namespace JerseyStore.Api.Tests;
 public sealed class CatalogApiFactory : WebApplicationFactory<Program>
 {
     private readonly string _connectionString;
+    private readonly string _uploadDirectory = Path.Combine(
+        Path.GetTempPath(), $"jersey-store-test-uploads-{Guid.NewGuid():N}");
 
     public CatalogApiFactory()
     {
@@ -37,18 +39,39 @@ public sealed class CatalogApiFactory : WebApplicationFactory<Program>
             {
                 ["ConnectionStrings:DefaultConnection"] = _connectionString,
                 ["Cors:AllowedOrigin"] = "http://localhost:3000",
+                ["Authentication:Jwt:SigningKey"] = "test-only-signing-key-with-more-than-32-bytes",
+                ["Authentication:Jwt:Issuer"] = "JerseyStore.Api.Tests",
+                ["Authentication:Jwt:Audience"] = "JerseyStore.Admin.Tests",
+                ["AdminBootstrap:Email"] = "admin@example.test",
+                ["AdminBootstrap:Password"] = "Test-Admin-Password-123!",
+                ["ImageStorage:Directory"] = _uploadDirectory,
             });
         });
     }
 
     public async Task ResetDatabaseAsync()
     {
+        if (Directory.Exists(_uploadDirectory))
+        {
+            Directory.Delete(_uploadDirectory, recursive: true);
+        }
+
+        Directory.CreateDirectory(_uploadDirectory);
         using var scope = Services.CreateScope();
         var dbContext = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
         await dbContext.Database.MigrateAsync();
-        await dbContext.Products.Where(product => product.Id >= 100).ExecuteDeleteAsync();
+        await dbContext.Products.Where(product => product.Id > 10).ExecuteDeleteAsync();
         await dbContext.Products.AddRangeAsync(CreateTestProducts());
         await dbContext.SaveChangesAsync();
+    }
+
+    protected override void Dispose(bool disposing)
+    {
+        base.Dispose(disposing);
+        if (disposing && Directory.Exists(_uploadDirectory))
+        {
+            Directory.Delete(_uploadDirectory, recursive: true);
+        }
     }
 
     private static IEnumerable<Product> CreateTestProducts()

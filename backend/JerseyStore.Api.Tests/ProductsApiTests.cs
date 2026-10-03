@@ -1,7 +1,12 @@
 using System.Net;
+using System.Net.Http.Headers;
 using System.Net.Http.Json;
+using System.IdentityModel.Tokens.Jwt;
+using System.Security.Claims;
+using System.Text;
 using System.Text.Json;
 using JerseyStore.Api.Contracts;
+using Microsoft.IdentityModel.Tokens;
 using Xunit;
 
 namespace JerseyStore.Api.Tests;
@@ -146,5 +151,246 @@ public sealed class ProductsApiTests : IClassFixture<CatalogApiFactory>, IAsyncL
         Assert.Equal("Arsenal 2025/26 Away Jersey", json.GetProperty("name").GetString());
         Assert.True(json.GetProperty("description").GetString()!.Length > 0);
         Assert.True(json.GetProperty("variants").GetArrayLength() > 0);
+    }
+
+    [Fact]
+    public async Task Admin_login_and_role_authorization_enforce_access_boundaries()
+    {
+        using var client = _factory.CreateClient();
+        var anonymous = await client.GetAsync("/api/admin/products");
+        Assert.Equal(HttpStatusCode.Unauthorized, anonymous.StatusCode);
+
+        var invalidLogin = await client.PostAsJsonAsync("/api/admin/auth/login", new
+        {
+            email = "admin@example.test",
+            password = "wrong-password",
+        });
+        Assert.Equal(HttpStatusCode.Unauthorized, invalidLogin.StatusCode);
+
+        var adminToken = await LoginAsAdminAsync(client);
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", adminToken);
+        var adminResponse = await client.GetAsync("/api/admin/products");
+        Assert.Equal(HttpStatusCode.OK, adminResponse.StatusCode);
+
+        client.DefaultRequestHeaders.Authorization =
+            new AuthenticationHeaderValue("Bearer", CreateToken("member", "Customer"));
+        var nonAdminResponse = await client.GetAsync("/api/admin/products");
+        Assert.Equal(HttpStatusCode.Forbidden, nonAdminResponse.StatusCode);
+    }
+
+    [Fact]
+    public async Task Admin_can_create_update_stock_and_delete_product()
+    {
+        using var client = _factory.CreateClient();
+        client.DefaultRequestHeaders.Authorization =
+            new AuthenticationHeaderValue("Bearer", await LoginAsAdminAsync(client));
+
+        var invalidProductResponse = await client.PostAsJsonAsync(
+            "/api/admin/products",
+            CreateProductRequest() with { Slug = "Invalid Slug" });
+        Assert.Equal(HttpStatusCode.BadRequest, invalidProductResponse.StatusCode);
+
+        var createResponse = await client.PostAsJsonAsync("/api/admin/products", CreateProductRequest());
+        Assert.Equal(HttpStatusCode.Created, createResponse.StatusCode);
+        Assert.NotNull(createResponse.Headers.Location);
+        var product = await createResponse.Content.ReadFromJsonAsync<AdminProductResponse>();
+        Assert.NotNull(product);
+
+        var duplicateResponse = await client.PostAsJsonAsync("/api/admin/products", CreateProductRequest());
+        Assert.Equal(HttpStatusCode.Conflict, duplicateResponse.StatusCode);
+
+        var updated = new UpdateAdminProductRequest
+        {
+            Slug = "admin-created-jersey",
+            Name = "Updated Admin Jersey",
+            Club = "Admin FC",
+            Season = "2032/33",
+            KitType = "Home",
+            Description = "Updated description.",
+            DisplayOrder = 51,
+            IsActive = true,
+            Variants =
+            [
+                new AdminProductVariantRequest
+                {
+                    Id = Assert.Single(product.Variants).Id,
+                    Size = "M",
+                    SizeOrder = 2,
+                    Price = 225m,
+                    Stock = 7,
+                    IsActive = true,
+                },
+            ],
+        };
+        var updateResponse = await client.PutAsJsonAsync($"/api/admin/products/{product.Id}", updated);
+        Assert.Equal(HttpStatusCode.OK, updateResponse.StatusCode);
+
+        var stockResponse = await client.PatchAsJsonAsync(
+            $"/api/admin/products/{product.Id}/variants/{product.Variants[0].Id}/stock",
+            new UpdateVariantStockRequest { Stock = 11 });
+        Assert.Equal(HttpStatusCode.OK, stockResponse.StatusCode);
+        var stockProduct = await stockResponse.Content.ReadFromJsonAsync<AdminProductResponse>();
+        Assert.Equal(11, Assert.Single(stockProduct!.Variants).Stock);
+
+        var invalidStockResponse = await client.PatchAsJsonAsync(
+            $"/api/admin/products/{product.Id}/variants/{product.Variants[0].Id}/stock",
+            new UpdateVariantStockRequest { Stock = -1 });
+        Assert.Equal(HttpStatusCode.BadRequest, invalidStockResponse.StatusCode);
+
+        var deleteResponse = await client.DeleteAsync($"/api/admin/products/{product.Id}");
+        Assert.Equal(HttpStatusCode.NoContent, deleteResponse.StatusCode);
+        var missingResponse = await client.GetAsync($"/api/admin/products/{product.Id}");
+        Assert.Equal(HttpStatusCode.NotFound, missingResponse.StatusCode);
+    }
+
+    [Fact]
+    public async Task Admin_image_upload_validates_content_and_serves_uploaded_image()
+    {
+        using var client = _factory.CreateClient();
+        client.DefaultRequestHeaders.Authorization =
+            new AuthenticationHeaderValue("Bearer", await LoginAsAdminAsync(client));
+        var createResponse = await client.PostAsJsonAsync("/api/admin/products", CreateProductRequest());
+        var product = await createResponse.Content.ReadFromJsonAsync<AdminProductResponse>();
+        Assert.NotNull(product);
+
+        using var content = new MultipartFormDataContent();
+        var png = Convert.FromBase64String(
+            "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+/S1sAAAAASUVORK5CYII=");
+        var file = new ByteArrayContent(png);
+        file.Headers.ContentType = new MediaTypeHeaderValue("image/png");
+        content.Add(file, "file", "shirt.png");
+        content.Add(new StringContent("Admin jersey"), "altText");
+
+        var uploadResponse = await client.PostAsync(
+            $"/api/admin/products/{product.Id}/images", content);
+        Assert.Equal(HttpStatusCode.Created, uploadResponse.StatusCode);
+        var image = await uploadResponse.Content.ReadFromJsonAsync<AdminProductImageResponse>();
+        Assert.NotNull(image);
+        Assert.StartsWith("/uploads/", image.Url, StringComparison.Ordinal);
+        Assert.True(image.IsPrimary);
+        Assert.Equal(HttpStatusCode.OK, (await client.GetAsync(image.Url)).StatusCode);
+        var publicProduct = await client.GetFromJsonAsync<ProductDetailResponse>(
+            "/api/products/admin-created-jersey");
+        Assert.Equal(image.Url, publicProduct!.ImageUrl);
+
+        using var invalidContent = new MultipartFormDataContent();
+        var invalidFile = new ByteArrayContent("not an image"u8.ToArray());
+        invalidFile.Headers.ContentType = new MediaTypeHeaderValue("image/png");
+        invalidContent.Add(invalidFile, "file", "shirt.png");
+        var invalidResponse = await client.PostAsync(
+            $"/api/admin/products/{product.Id}/images", invalidContent);
+        Assert.Equal(HttpStatusCode.BadRequest, invalidResponse.StatusCode);
+
+        using var secondContent = new MultipartFormDataContent();
+        var secondFile = new ByteArrayContent(png);
+        secondFile.Headers.ContentType = new MediaTypeHeaderValue("image/png");
+        secondContent.Add(secondFile, "file", "shirt-2.png");
+        var secondResponse = await client.PostAsync(
+            $"/api/admin/products/{product.Id}/images", secondContent);
+        var secondImage = await secondResponse.Content.ReadFromJsonAsync<AdminProductImageResponse>();
+        Assert.NotNull(secondImage);
+        Assert.NotEqual(image.Id, secondImage.Id);
+
+        var primaryResponse = await client.PutAsync(
+            $"/api/admin/products/{product.Id}/images/{image.Id}/primary", null);
+        Assert.Equal(HttpStatusCode.OK, primaryResponse.StatusCode);
+        var updated = await primaryResponse.Content.ReadFromJsonAsync<AdminProductResponse>();
+        Assert.Equal(image.Id, Assert.Single(updated!.Images, i => i.IsPrimary).Id);
+        publicProduct = await client.GetFromJsonAsync<ProductDetailResponse>(
+            "/api/products/admin-created-jersey");
+        Assert.Equal(image.Url, publicProduct!.ImageUrl);
+        Assert.Equal(image.Url, publicProduct.Images[0].Url);
+
+        Assert.Equal(HttpStatusCode.NotFound, (await client.PutAsync(
+            $"/api/admin/products/{product.Id}/images/999999/primary", null)).StatusCode);
+
+        var deleteResponse = await client.DeleteAsync(
+            $"/api/admin/products/{product.Id}/images/{image.Id}");
+        Assert.Equal(HttpStatusCode.OK, deleteResponse.StatusCode);
+        var afterDelete = await deleteResponse.Content.ReadFromJsonAsync<AdminProductResponse>();
+        var remaining = Assert.Single(afterDelete!.Images);
+        Assert.Equal(secondImage.Id, remaining.Id);
+        Assert.True(remaining.IsPrimary);
+        Assert.Equal(HttpStatusCode.NotFound, (await client.GetAsync(image.Url)).StatusCode);
+        Assert.Equal(HttpStatusCode.NotFound, (await client.DeleteAsync(
+            $"/api/admin/products/{product.Id}/images/{image.Id}")).StatusCode);
+    }
+
+    [Fact]
+    public async Task Admin_can_update_whatsapp_number_used_by_storefront()
+    {
+        using var client = _factory.CreateClient();
+        Assert.Equal(HttpStatusCode.Unauthorized, (await client.GetAsync("/api/admin/settings")).StatusCode);
+
+        client.DefaultRequestHeaders.Authorization =
+            new AuthenticationHeaderValue("Bearer", await LoginAsAdminAsync(client));
+        var original = (await client.GetFromJsonAsync<JerseyStore.Api.Controllers.AdminSettingsResponse>("/api/admin/settings"))!.WhatsAppNumber;
+
+        try
+        {
+            var invalid = await client.PutAsJsonAsync("/api/admin/settings", new { whatsAppNumber = "0501234567" });
+            Assert.Equal(HttpStatusCode.BadRequest, invalid.StatusCode);
+
+            var saved = await client.PutAsJsonAsync("/api/admin/settings", new { whatsAppNumber = "+233 50 123 4567" });
+            Assert.Equal(HttpStatusCode.OK, saved.StatusCode);
+
+            var storefront = await client.GetFromJsonAsync<StorefrontResponse>("/api/storefront");
+            Assert.Equal("+233501234567", storefront!.WhatsAppNumber);
+        }
+        finally
+        {
+            await client.PutAsJsonAsync("/api/admin/settings", new { whatsAppNumber = original });
+        }
+    }
+
+    private static async Task<string> LoginAsAdminAsync(HttpClient client)
+    {
+        var response = await client.PostAsJsonAsync("/api/admin/auth/login", new
+        {
+            email = "admin@example.test",
+            password = "Test-Admin-Password-123!",
+        });
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var login = await response.Content.ReadFromJsonAsync<AdminLoginResponse>();
+        Assert.NotNull(login);
+        Assert.True(login.ExpiresAt > DateTimeOffset.UtcNow);
+        return login.AccessToken;
+    }
+
+    private static CreateAdminProductRequest CreateProductRequest() => new()
+    {
+        Slug = "admin-created-jersey",
+        Name = "Admin Jersey",
+        Club = "Admin FC",
+        Season = "2032/33",
+        KitType = "Home",
+        Description = "An administrator-created test jersey.",
+        DisplayOrder = 50,
+        IsActive = true,
+        Variants =
+        [
+            new AdminProductVariantRequest
+            {
+                Size = "M",
+                SizeOrder = 2,
+                Price = 200m,
+                Stock = 4,
+                IsActive = true,
+            },
+        ],
+    };
+
+    private static string CreateToken(string subject, string role)
+    {
+        var token = new JwtSecurityToken(
+            issuer: "JerseyStore.Api.Tests",
+            audience: "JerseyStore.Admin.Tests",
+            claims: [new Claim("sub", subject), new Claim("role", role)],
+            notBefore: DateTime.UtcNow.AddMinutes(-1),
+            expires: DateTime.UtcNow.AddMinutes(5),
+            signingCredentials: new SigningCredentials(
+                new SymmetricSecurityKey(Encoding.UTF8.GetBytes("test-only-signing-key-with-more-than-32-bytes")),
+                SecurityAlgorithms.HmacSha256));
+        return new JwtSecurityTokenHandler().WriteToken(token);
     }
 }

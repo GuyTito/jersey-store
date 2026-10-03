@@ -8,7 +8,7 @@ const geistSans = Geist({
 });
 
 export const metadata: Metadata = {
-  title: "Jersey Store",
+  title: { default: "Jersey Store", template: "%s | Jersey Store" },
   description: "Authentic club jerseys, ordered over WhatsApp.",
 };
 

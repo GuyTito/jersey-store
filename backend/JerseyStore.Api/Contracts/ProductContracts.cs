@@ -19,6 +19,8 @@ public sealed record ProductVariantResponse(
     decimal Price,
     int Stock);
 
+public sealed record ProductImageResponse(string Url, string? AltText);
+
 public sealed record ProductDetailResponse(
     int Id,
     string Slug,
@@ -28,6 +30,7 @@ public sealed record ProductDetailResponse(
     string KitType,
     string Description,
     string ImageUrl,
+    IReadOnlyList<ProductImageResponse> Images,
     IReadOnlyList<ProductVariantResponse> Variants);
 
 public sealed record PagedResponse<T>(

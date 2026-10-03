@@ -1,8 +1,104 @@
 @JerseyStore.Api_HostAddress = http://localhost:5080
 
-### Health check - verifies the API is running
-GET {{JerseyStore.Api_HostAddress}}/api/Health
+### Health check
+GET {{JerseyStore.Api_HostAddress}}/api/health
 Accept: application/json
 
 ###
 
+### Public product catalog
+GET {{JerseyStore.Api_HostAddress}}/api/products?page=1
+Accept: application/json
+
+### Administrator login
+POST {{JerseyStore.Api_HostAddress}}/api/admin/auth/login
+Content-Type: application/json
+
+{
+  "email": "<configured-admin-email>",
+  "password": "<configured-admin-password>"
+}
+
+### Set this to the accessToken returned by login
+@adminToken = <paste-access-token>
+@productId = 11
+@variantId = 1
+
+### Current administrator
+GET {{JerseyStore.Api_HostAddress}}/api/admin/auth/me
+Authorization: Bearer {{adminToken}}
+
+### List all products for administration
+GET {{JerseyStore.Api_HostAddress}}/api/admin/products
+Authorization: Bearer {{adminToken}}
+
+### Create product
+POST {{JerseyStore.Api_HostAddress}}/api/admin/products
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "slug": "chelsea-2030-31-home",
+  "name": "Chelsea 2030/31 Home Jersey",
+  "club": "Chelsea",
+  "season": "2030/31",
+  "kitType": "Home",
+  "description": "Blue home jersey.",
+  "displayOrder": 20,
+  "isActive": true,
+  "variants": [
+    { "size": "M", "sizeOrder": 2, "price": 350, "stock": 5, "sku": "CHELSEA-M", "isActive": true }
+  ]
+}
+
+### Get an admin product
+GET {{JerseyStore.Api_HostAddress}}/api/admin/products/{{productId}}
+Authorization: Bearer {{adminToken}}
+
+### Update product (include variant IDs from the admin product response)
+PUT {{JerseyStore.Api_HostAddress}}/api/admin/products/{{productId}}
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "slug": "chelsea-2030-31-home",
+  "name": "Chelsea 2030/31 Home Jersey",
+  "club": "Chelsea",
+  "season": "2030/31",
+  "kitType": "Home",
+  "description": "Updated blue home jersey.",
+  "displayOrder": 20,
+  "isActive": true,
+  "variants": [
+    { "id": {{variantId}}, "size": "M", "sizeOrder": 2, "price": 360, "stock": 5, "sku": "CHELSEA-M", "isActive": true }
+  ]
+}
+
+### Update variant stock
+PATCH {{JerseyStore.Api_HostAddress}}/api/admin/products/{{productId}}/variants/{{variantId}}/stock
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "stock": 8
+}
+
+### Upload an image (replace ./sample-shirt.png with a valid local image)
+POST {{JerseyStore.Api_HostAddress}}/api/admin/products/{{productId}}/images
+Authorization: Bearer {{adminToken}}
+Content-Type: multipart/form-data; boundary=JerseyStoreBoundary
+
+--JerseyStoreBoundary
+Content-Disposition: form-data; name="altText"
+
+Chelsea home shirt
+--JerseyStoreBoundary
+Content-Disposition: form-data; name="file"; filename="sample-shirt.png"
+Content-Type: image/png
+
+< ./sample-shirt.png
+--JerseyStoreBoundary--
+
+### Delete product (use an existing ID; a missing ID returns 404)
+DELETE {{JerseyStore.Api_HostAddress}}/api/admin/products/{{productId}}
+Authorization: Bearer {{adminToken}}

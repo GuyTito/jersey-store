@@ -77,6 +77,11 @@ public sealed class ProductsController : ControllerBase
     private static ProductDetailResponse ToDetail(Product product) =>
         new(product.Id, product.Slug, product.Name, product.Club, product.Season,
             product.KitType, product.Description, product.ImageUrl,
+            product.Images
+                .OrderByDescending(i => i.IsPrimary)
+                .ThenBy(i => i.DisplayOrder)
+                .Select(i => new ProductImageResponse(i.Url, i.AltText))
+                .ToList(),
             product.Variants
                 .OrderBy(v => v.SizeOrder)
                 .ThenBy(v => v.Size)
