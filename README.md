@@ -1,6 +1,14 @@
 # Jersey Store
 
-Milestone 0: a Next.js page fetches a health message from an ASP.NET Core API.
+Jersey Store is a full-stack football jersey storefront with an ASP.NET Core API and a Next.js frontend.
+
+## Current project status
+
+**Current milestone: Milestone 3 — Search, filter, pagination.**
+
+The project has progressed beyond the initial health-check setup. The API serves a PostgreSQL-backed product catalog through EF Core, and the storefront supports product details, catalog search and filters, paged results, and ordering through WhatsApp. Milestone 3 is the current catalog milestone; the next roadmap milestone is admin login and product management.
+
+The project vision and milestone scope are guided by [`docs/milestones.md`](docs/milestones.md). Store all project plans in `.kilo/plans/`.
 
 ## Run both (with hot reload)
 
