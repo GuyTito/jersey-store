@@ -1,17 +1,17 @@
-@JerseyStore.Api_HostAddress = http://localhost:5080
+@Api_HostAddress = http://localhost:5080
 
 ### Health check
-GET {{JerseyStore.Api_HostAddress}}/api/health
+GET {{Api_HostAddress}}/api/health
 Accept: application/json
 
 ###
 
 ### Public product catalog
-GET {{JerseyStore.Api_HostAddress}}/api/products?page=1
+GET {{Api_HostAddress}}/api/products?page=1
 Accept: application/json
 
 ### Administrator login
-POST {{JerseyStore.Api_HostAddress}}/api/admin/auth/login
+POST {{Api_HostAddress}}/api/admin/auth/login
 Content-Type: application/json
 
 {
@@ -25,15 +25,15 @@ Content-Type: application/json
 @variantId = 1
 
 ### Current administrator
-GET {{JerseyStore.Api_HostAddress}}/api/admin/auth/me
+GET {{Api_HostAddress}}/api/admin/auth/me
 Authorization: Bearer {{adminToken}}
 
 ### List all products for administration
-GET {{JerseyStore.Api_HostAddress}}/api/admin/products
+GET {{Api_HostAddress}}/api/admin/products
 Authorization: Bearer {{adminToken}}
 
 ### Create product
-POST {{JerseyStore.Api_HostAddress}}/api/admin/products
+POST {{Api_HostAddress}}/api/admin/products
 Authorization: Bearer {{adminToken}}
 Content-Type: application/json
 
@@ -52,11 +52,11 @@ Content-Type: application/json
 }
 
 ### Get an admin product
-GET {{JerseyStore.Api_HostAddress}}/api/admin/products/{{productId}}
+GET {{Api_HostAddress}}/api/admin/products/{{productId}}
 Authorization: Bearer {{adminToken}}
 
 ### Update product (include variant IDs from the admin product response)
-PUT {{JerseyStore.Api_HostAddress}}/api/admin/products/{{productId}}
+PUT {{Api_HostAddress}}/api/admin/products/{{productId}}
 Authorization: Bearer {{adminToken}}
 Content-Type: application/json
 
@@ -75,7 +75,7 @@ Content-Type: application/json
 }
 
 ### Update variant stock
-PATCH {{JerseyStore.Api_HostAddress}}/api/admin/products/{{productId}}/variants/{{variantId}}/stock
+PATCH {{Api_HostAddress}}/api/admin/products/{{productId}}/variants/{{variantId}}/stock
 Authorization: Bearer {{adminToken}}
 Content-Type: application/json
 
@@ -84,7 +84,7 @@ Content-Type: application/json
 }
 
 ### Upload an image (replace ./sample-shirt.png with a valid local image)
-POST {{JerseyStore.Api_HostAddress}}/api/admin/products/{{productId}}/images
+POST {{Api_HostAddress}}/api/admin/products/{{productId}}/images
 Authorization: Bearer {{adminToken}}
 Content-Type: multipart/form-data; boundary=JerseyStoreBoundary
 
@@ -100,5 +100,5 @@ Content-Type: image/png
 --JerseyStoreBoundary--
 
 ### Delete product (use an existing ID; a missing ID returns 404)
-DELETE {{JerseyStore.Api_HostAddress}}/api/admin/products/{{productId}}
+DELETE {{Api_HostAddress}}/api/admin/products/{{productId}}
 Authorization: Bearer {{adminToken}}
